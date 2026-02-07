@@ -7,13 +7,14 @@ def open_website(url):
 
 def open_application(app_name):
     apps = {
-        "brave": r"C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Brave",
+        "brave": r"C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Brave.lnk",
         "vs code": "code",
+        "visual studio code": "code",
         "notepad": "notepad.exe"
     }
 
     if app_name in apps:
-        subprocess.Popen(apps[app_name])
+        subprocess.Popen(apps[app_name], shell=True)
     else:
         print("Application not configured.")
 

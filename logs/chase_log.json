@@ -1,0 +1,87 @@
+{
+    "intent_usage": {},
+    "errors": [
+        {
+            "time": "2026-02-05 01:21:21",
+            "error": "Invalid format specifier"
+        },
+        {
+            "time": "2026-02-05 01:27:38",
+            "error": "Invalid format specifier"
+        },
+        {
+            "time": "2026-02-05 01:30:37",
+            "error": "Invalid format specifier"
+        },
+        {
+            "time": "2026-02-05 01:31:12",
+            "error": "Invalid format specifier"
+        }
+    ],
+    "command_history": [
+        {
+            "time": "2026-02-05 01:34:31.983616",
+            "command": "How are you ?"
+        },
+        {
+            "time": "2026-02-05 01:42:08.233654",
+            "command": "How are you ?"
+        },
+        {
+            "time": "2026-02-05 01:58:00.775258",
+            "command": "how are you ?"
+        },
+        {
+            "time": "2026-02-05 01:58:20.257084",
+            "command": "open youtube"
+        },
+        {
+            "time": "2026-02-05 01:58:48.556028",
+            "command": "search iron man jarvis face ?"
+        },
+        {
+            "time": "2026-02-05 02:57:34.127785",
+            "command": "Create a Flask login API"
+        },
+        {
+            "time": "2026-02-05 10:38:18.425574",
+            "command": "Write a PyQt6 application that creates a dark themed AI assistant interface with a glowing animated circle in the center."
+        },
+        {
+            "time": "2026-02-05 10:38:30.582449",
+            "command": "Use object-oriented structure."
+        },
+        {
+            "time": "2026-02-05 10:38:43.811615",
+            "command": "Return only executable code."
+        },
+        {
+            "time": "2026-02-05 21:56:50.306228",
+            "command": ""
+        },
+        {
+            "time": "2026-02-05 21:57:15.317346",
+            "command": ""
+        },
+        {
+            "time": "2026-02-06 03:11:14.215725",
+            "command": "open youtube"
+        },
+        {
+            "time": "2026-02-06 03:11:31.487374",
+            "command": ""
+        },
+        {
+            "time": "2026-02-06 03:28:33.567963",
+            "command": "open youtube"
+        },
+        {
+            "time": "2026-02-06 03:28:58.830237",
+            "command": "search mr. beast"
+        },
+        {
+            "time": "2026-02-06 15:55:49.509730",
+            "command": "open youtube"
+        }
+    ]
+}
