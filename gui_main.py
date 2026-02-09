@@ -3,7 +3,7 @@ from pydoc import text
 import os
 import sys, math, re, json, threading
 import time
-from turtle import title
+
 from PySide6.QtWidgets import (
     QApplication, QWidget, QPushButton, QLabel, QVBoxLayout,
     QFrame, QScrollArea, QLineEdit, QHBoxLayout
@@ -89,8 +89,9 @@ class NeonSwirlRing(QWidget):
         for t in range(2):
             path = QPainterPath()
             offset = self.phase + (t * 2)
-            base_r = 45 if not self.active else 50
-            amp = 3 if not self.active else 8
+            max_radius = min(self.width(), self.height()) / 2 - 4
+            base_r = max_radius - 6
+            amp = 2 if not self.active else 4
 
             for i in range(90):
                 angle = (math.pi * 2 / 90) * i
@@ -206,30 +207,21 @@ class ChaseGUI(QWidget):
     # ================= HEADER =================
          self.header_container = QWidget()
          header_layout = QHBoxLayout(self.header_container)
-         header_layout.setContentsMargins(0, 0, 0, 0)
 
          self.header_logo = NeonSwirlRing("#818cf8")
-         self.header_logo.setFixedSize(45, 45)
-
-         title = QLabel("Chase")
-         title.setFont(QFont("Segoe UI", 16, QFont.Bold))
-         title.setStyleSheet("color: #818cf8;")
-
+         self.header_logo.setFixedSize(36, 36)
          header_layout.addWidget(self.header_logo)
-         header_layout.addSpacing(10)
-         header_layout.addWidget(title)
          header_layout.addStretch()
-
+         
          self.header_container.hide()
          self.main_layout.addWidget(self.header_container)
 
-    # ================= HERO =================
+    # ================= HERO SECTION =================
          self.hero_container = QWidget()
          hero_layout = QVBoxLayout(self.hero_container)
          hero_layout.setAlignment(Qt.AlignCenter)
 
          self.hero_ring = NeonSwirlRing("#818cf8")
-         self.hero_ring.setFixedSize(140, 140)
 
          self.hero_title = QLabel("How can I help you?")
          self.hero_title.setFont(QFont("Segoe UI", 22, QFont.Bold))
@@ -258,7 +250,8 @@ class ChaseGUI(QWidget):
 
     # ================= INPUT =================
          self.input_container = QFrame()
-         self.input_container.setFixedHeight(55)
+         self.input_container.setFixedHeight(50)
+         self.input_container.setFixedWidth(460)
          self.input_container.setStyleSheet("""
              background-color: #1e293b;
              border-radius: 24px;
@@ -296,6 +289,9 @@ class ChaseGUI(QWidget):
 
             # Move input to bottom
             self.main_layout.addWidget(self.input_container)
+            self.input_container.setMinimumWidth(0)
+            self.input_container.setMaximumWidth(16777215)
+
 
         row = QWidget()
         row_layout = QHBoxLayout(row)
@@ -392,7 +388,8 @@ class ChaseGUI(QWidget):
         response = summarize_search(clean, "")
         self.reply(response)
 
-    def reply(self):
+    def reply(self, message):
+        self.add_message(message, is_user=False)
         # UI SAFE
         avater = NeonSwirlRing("#818cf8")
         avater.setFixedSize(28, 28)
