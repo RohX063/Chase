@@ -3,6 +3,7 @@ from pydoc import text
 import os
 import sys, math, re, json, threading
 import time
+import threading
 
 from PySide6.QtWidgets import (
     QApplication, QWidget, QPushButton, QLabel, QVBoxLayout,
@@ -12,7 +13,7 @@ from PySide6.QtCore import Qt, QSize, QTimer, Signal, QPointF
 from PySide6.QtGui import QIcon, QColor, QFont, QPainter, QPen, QPainterPath
 
 from audio.recorder import VoiceRecorder
-from brain.llm_handler import summarize_search, detect_intent
+from brain.llm_handler import summarize_search, detect_intent, chat_response
 from tts.piper_handler import speak
 from actions.system_control import open_website
 from memory.memory_handler import set_memory, update_context
@@ -41,7 +42,13 @@ class AudioWaveform(QWidget):
         mid = self.height() / 2
 
         pen = QPen(QColor(192, 132, 252))
-        pen.setWidth(3)
+        ring_size = min(self.width(), self.height())
+
+        if ring_size < 60:
+            pen.setWidth(1)
+        else:
+            pen.setWidth(3)
+
         p.setPen(pen)
 
         for i, v in enumerate(self.values):
@@ -167,13 +174,33 @@ class ChaseGUI(QWidget):
       text = self.input.text().strip()
 
       if not text:
-        return
+         return
 
       self.add_message(text, is_user=True)
       self.input.clear()
 
-    #   TODO: Replace with real LLM logic later
-      self.reply("Thinking...")
+    # Show temporary thinking bubble
+      self.add_message("Thinking...", is_user=False)
+
+    
+      threading.Thread(
+        target=self.process_llm,
+        args=(text,),
+        daemon=True
+    ).start()
+      
+    def process_llm(self, text):
+     try:
+        reply = chat_response(text)
+
+        # Remove last "Thinking..." bubble
+        self.chat_layout.takeAt(self.chat_layout.count() - 1)
+
+        self.add_msg_signal.emit(reply, False)
+
+     except Exception as e:
+        print("LLM ERROR:", e)
+        self.add_msg_signal.emit("Error: LLM failed.", False)
 
 
     add_msg_signal = Signal(str, bool)  # (text, is_user)
@@ -357,6 +384,21 @@ class ChaseGUI(QWidget):
 
         self.add_msg_signal.emit(text, True)
         threading.Thread(target=self.process, args=(text,), daemon=True).start()
+
+    def process(self, text):
+        try:
+            print("Processing:", text)
+
+            reply = chat_response(text)
+
+            print("LLM Reply:", reply)
+
+            self.add_msg_signal.emit(reply, False)
+
+        except Exception as e:
+            print("LLM ERROR:", e)
+            self.add_msg_signal.emit("Error: LLM failed.", False)
+    
 
     def process_voice(self, audio):
 
