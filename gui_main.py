@@ -1,9 +1,10 @@
 from email.mime import text
-from pydoc import text
 import os
 import sys, math, re, json, threading
 import time
 import threading
+import json
+import webbrowser
 
 from PySide6.QtWidgets import (
     QApplication, QWidget, QPushButton, QLabel, QVBoxLayout,
@@ -18,6 +19,7 @@ from tts.piper_handler import speak
 from actions.system_control import open_website
 from memory.memory_handler import set_memory, update_context
 from stt.voice_input import speech_to_text
+from brain.llm_handler import detect_intent, chat_response
 
 
 # ======================================================
@@ -137,10 +139,38 @@ class ChatBubble(QFrame):
         else:
             self.setStyleSheet("background:#0f172a; color:#e2e8f0; border:1px solid #1e293b; border-radius:15px; border-bottom-left-radius:2px;")
 
+#========================================================
+# Thinking Animation 
+#========================================================
+class ThinkingBubble(QFrame):
+    def __init__(self):
+        super().__init__()
 
-# ======================================================
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(15, 10, 15, 10)
+        layout.setSpacing(10)
+
+        self.ring = NeonSwirlRing("#818cf8")
+        self.ring.setFixedSize(24, 24)
+        self.ring.set_active(True)
+
+        lbl = QLabel("Thinking...")
+        lbl.setStyleSheet("color:#e2e8f0;")
+        lbl.setFont(QFont("Segoe UI", 10))
+
+        layout.addWidget(self.ring)
+        layout.addWidget(lbl)
+
+        self.setStyleSheet("""
+            background:#0f172a;
+            border:1px solid #1e293b;
+            border-radius:15px;
+            border-bottom-left-radius:2px;
+        """)
+
+# =======================================================
 # MAIN GUI
-# ======================================================
+# =======================================================
 class ImageMicButton(QPushButton):
     def __init__(self, idle_path, active_path, size=50):
         super().__init__()
@@ -170,31 +200,70 @@ class ImageMicButton(QPushButton):
 
 class ChaseGUI(QWidget):
 
+
+    def show_thinking(self):
+      self.thinking_row = QWidget()
+      row_layout = QHBoxLayout(self.thinking_row)
+      row_layout.setContentsMargins(0, 5, 0, 5)
+
+      bubble = ThinkingBubble()
+
+      row_layout.addWidget(bubble)
+      row_layout.addStretch()
+
+      self.chat_layout.addWidget(self.thinking_row)
+
+      QTimer.singleShot(100, lambda: self.scroll.verticalScrollBar().setValue(
+      self.scroll.verticalScrollBar().maximum()
+    ))
+
     def handle_send(self):
-      text = self.input.text().strip()
+        text =self.input.text().strip()
 
-      if not text:
-         return
+        if not text:
+            return
+        
+        self.add_message(text, is_user=True)
+        self.input.clear()
 
-      self.add_message(text, is_user=True)
-      self.input.clear()
+        self.add_message("Thinking...", is_user=False)
 
-    # Show temporary thinking bubble
-      self.add_message("Thinking...", is_user=False)
+        # Detect intent
+        intent_raw = detect_intent(text)
 
-    
-      threading.Thread(
-        target=self.process_llm,
-        args=(text,),
-        daemon=True
-    ).start()
+        try:
+            intent_data = json.loads(intent_raw)
+            intent = intent_data.get("intent")
+            target = intent_data.get("target", "").lower().strip()
+
+        except Exception:
+            intent = "unknown"
+            target = ""
+               
+        # Router
+        if intent == "open_website":
+            webbrowser.open("https://{target}.com")
+            self.add_message(f"Opening {target}.", is_user=False)
+
+        elif intent == "open_application":
+            os.system(target)
+            self.add_message(f"Opening {target}.", is_user=False)
+            target = target.replace(".","")
+
+        else:
+            #Normal chat
+            reply = chat_response(text)
+            self.add_message(reply, is_user=False)      
+
+
       
     def process_llm(self, text):
      try:
         reply = chat_response(text)
 
         # Remove last "Thinking..." bubble
-        self.chat_layout.takeAt(self.chat_layout.count() - 1)
+        if hasattr(self, "thinking_row"):
+            self.thinking_row.setParent(None)
 
         self.add_msg_signal.emit(reply, False)
 
@@ -208,7 +277,7 @@ class ChaseGUI(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Chase Assistant")
+        self.setWindowTitle("Chase")
         self.setMinimumSize(550, 850)
         self.setStyleSheet("background-color: #020617;")
         self.is_recording = False
