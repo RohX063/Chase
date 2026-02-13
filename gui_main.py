@@ -199,6 +199,9 @@ class ImageMicButton(QPushButton):
 
 
 class ChaseGUI(QWidget):
+    add_msg_signal = Signal(str, bool)
+    status_sig = Signal(str)
+    thinking_done = Signal()
 
 
     def show_thinking(self):
@@ -217,63 +220,50 @@ class ChaseGUI(QWidget):
       self.scroll.verticalScrollBar().maximum()
     ))
 
-    def handle_send(self):
-        text =self.input.text().strip()
+    def remove_thinking(self):
+        if hasattr(self, "thinking_row"):
+            try:
+                self.chat_layout.removeWidget(self.thinking_row)
+                self.thinking_row.deleteLater()
+                del self.thinking_row
+            except Exception:
+                pass
 
+    def handle_send(self):
+        text = self.input.text().strip()
         if not text:
             return
-        
+
         self.add_message(text, is_user=True)
         self.input.clear()
+        self.show_thinking()
 
-        self.add_message("Thinking...", is_user=False)
+        # Run LLM in background thread
+        threading.Thread(target=self.process_llm, args=(text,), daemon=True).start()
 
-        # Detect intent
+    def process_llm(self, text):
+
         intent_raw = detect_intent(text)
+        print("RAW INTENT:", intent_raw)
 
         try:
             intent_data = json.loads(intent_raw)
-            intent = intent_data.get("intent")
-            target = intent_data.get("target", "").lower().strip()
+        except:
+            intent_data = {"intent": "casual_chat"}
 
-        except Exception:
-            intent = "unknown"
-            target = ""
-               
-        # Router
-        if intent == "open_website":
-            webbrowser.open("https://{target}.com")
-            self.add_message(f"Opening {target}.", is_user=False)
+        intent = intent_data.get("intent", "")
+        target = intent_data.get("target", "")
 
-        elif intent == "open_application":
-            os.system(target)
-            self.add_message(f"Opening {target}.", is_user=False)
-            target = target.replace(".","")
-
+        if intent == "open_website" and "youtube" in text.lower():
+            webbrowser.open("https://www.youtube.com")
+            self.add_msg_signal.emit("Opening YouTube...", False)
+            self.thinking_done.emit()
         else:
-            #Normal chat
             reply = chat_response(text)
-            self.add_message(reply, is_user=False)      
+            self.add_msg_signal.emit(reply, False)
+            self.thinking_done.emit()
 
 
-      
-    def process_llm(self, text):
-     try:
-        reply = chat_response(text)
-
-        # Remove last "Thinking..." bubble
-        if hasattr(self, "thinking_row"):
-            self.thinking_row.setParent(None)
-
-        self.add_msg_signal.emit(reply, False)
-
-     except Exception as e:
-        print("LLM ERROR:", e)
-        self.add_msg_signal.emit("Error: LLM failed.", False)
-
-
-    add_msg_signal = Signal(str, bool)  # (text, is_user)
-    status_sig = Signal(str)  # For updating input placeholder during recording/processing
 
     def __init__(self):
         super().__init__()
