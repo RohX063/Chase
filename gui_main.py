@@ -12,12 +12,18 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QSize, QTimer, Signal, QPointF
 from PySide6.QtGui import QIcon, QColor, QFont, QPainter, QPen, QPainterPath
+from more_itertools import last
 
 from audio.recorder import VoiceRecorder
 from brain.llm_handler import summarize_search, detect_intent, chat_response
 from tts.piper_handler import speak
 from actions.system_control import open_website
-from memory.memory_handler import set_memory, update_context
+from memory.memory_handler import (
+    update_profile,
+    update_context,
+    get_profile,
+    get_context
+)
 from stt.voice_input import speech_to_text
 from brain.llm_handler import detect_intent, chat_response
 
@@ -137,7 +143,7 @@ class ChatBubble(QFrame):
         if is_user:
             self.setStyleSheet("background:#312e81; color:#f5f3ff; border-radius:15px; border-bottom-right-radius:2px;")
         else:
-            self.setStyleSheet("background:#0f172a; color:#e2e8f0; border:1px solid #1e293b; border-radius:15px; border-bottom-left-radius:2px;")
+            self.setStyleSheet("background:#0f172a; color:#e2e8f0; border-radius:15px; border-bottom-left-radius:2px;")
 
 #========================================================
 # Thinking Animation 
@@ -163,7 +169,6 @@ class ThinkingBubble(QFrame):
 
         self.setStyleSheet("""
             background:#0f172a;
-            border:1px solid #1e293b;
             border-radius:15px;
             border-bottom-left-radius:2px;
         """)
@@ -210,9 +215,7 @@ class ChaseGUI(QWidget):
       row_layout.setContentsMargins(0, 5, 0, 5)
 
       bubble = ThinkingBubble()
-
       row_layout.addWidget(bubble)
-      row_layout.addStretch()
 
       self.chat_layout.addWidget(self.thinking_row)
 
@@ -222,12 +225,8 @@ class ChaseGUI(QWidget):
 
     def remove_thinking(self):
         if hasattr(self, "thinking_row"):
-            try:
-                self.chat_layout.removeWidget(self.thinking_row)
-                self.thinking_row.deleteLater()
-                del self.thinking_row
-            except Exception:
-                pass
+            self.chat_layout.removeWidget(self.thinking_row)
+            self.thinking_row.deleteLater()
 
     def handle_send(self):
         text = self.input.text().strip()
@@ -237,6 +236,12 @@ class ChaseGUI(QWidget):
         self.add_message(text, is_user=True)
         self.input.clear()
         self.show_thinking()
+
+        if "my name is" in text.lower():
+            name = text.lower().replace("my name is", "").strip()
+            update_profile("name", name)
+            self.add_message(f"Nice to meet you, {name}!", False)
+            return
 
         # Run LLM in background thread
         threading.Thread(target=self.process_llm, args=(text,), daemon=True).start()
@@ -254,6 +259,12 @@ class ChaseGUI(QWidget):
         intent = intent_data.get("intent", "")
         target = intent_data.get("target", "")
 
+        profile = get_profile()
+        name = profile.get("name")
+
+        if name:
+            text = f"The user's name is {name}. Respond naturally.\n\nUser: {text}"
+
         if intent == "open_website" and "youtube" in text.lower():
             webbrowser.open("https://www.youtube.com")
             self.add_msg_signal.emit("Opening YouTube...", False)
@@ -261,12 +272,23 @@ class ChaseGUI(QWidget):
         else:
             reply = chat_response(text)
             self.add_msg_signal.emit(reply, False)
+            speak(reply)
             self.thinking_done.emit()
 
+            update_context("last_message", text)
+            last_topic = get_context().get("last_message")
+            print("Last message in context:", last_topic)
 
 
     def __init__(self):
         super().__init__()
+
+        self.profile = get_profile()
+        self.context = get_context()
+
+        print("Loaded profile:", self.profile)
+        print("Loaded context:", self.context)
+
         self.setWindowTitle("Chase")
         self.setMinimumSize(550, 850)
         self.setStyleSheet("background-color: #020617;")
