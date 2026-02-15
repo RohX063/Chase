@@ -225,7 +225,6 @@ class ChaseGUI(QWidget):
 
     def remove_thinking(self):
         if hasattr(self, "thinking_row"):
-            self.chat_layout.removeWidget(self.thinking_row)
             self.thinking_row.deleteLater()
 
     def handle_send(self):
@@ -311,7 +310,25 @@ class ChaseGUI(QWidget):
          self.main_layout = QVBoxLayout(self)
          self.main_layout.setContentsMargins(40, 30, 40, 30)
          self.main_layout.setSpacing(20)
+         
+         self.scroll = QScrollArea()
+         self.scroll.setWidgetResizable(True)
+         self.scroll.setStyleSheet("""
+QScrollBar:vertical {
+    background: transparent;
+    width: 8px;
+}
 
+QScrollBar::handle:vertical {
+    background: rgba(129, 140, 248, 0.5);
+    border-radius: 4px;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+""")
     # ================= HEADER =================
          self.header_container = QWidget()
          header_layout = QHBoxLayout(self.header_container)
